@@ -1,0 +1,179 @@
+const TELEGRAM_BOT_TOKEN = "7168523391:AAH-Ow7IK3aulE2adNQE3vjPJn2TuXNhIBo";
+const BASE_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
+
+async function handleTelegramUpdate(update) {
+    if (!update.message) return;
+
+    const chatId = update.message.chat.id;
+    const text = update.message.text;
+
+    // Extract the command and remove mentions (if any)
+    const commandText = text.split(" ")[0];
+    const command = commandText.replace(/@[\w_]+$/, "").trim();
+
+    try {
+        if (command === "/start") {
+            await sendTelegramMessage(chatId, "Welcome to the bot! Use /help to see available commands.");
+        } else if (command === "/help") {
+            const helpMessage = `
+\`\`\`
+Available Commands:\`\`\`
+/en [URL] - Encrypt a URL
+/de [URL] - Decrypt a URL
+/key - Get free V2RAY keys
+/mss - Get free VMess keys
+/cf - Get free Cloudflare keys
+/ss - Get free Shadowsocks keys
+/trj - Get free Trojan keys
+/lss - Get free VLess keys
+/jp - Get Japan server keys
+/sg - Get Singapore server keys
+
+            `;
+            await sendTelegramMessage(chatId, helpMessage);
+        } else if (command.startsWith("/en")) {
+            const url = text.slice(4).trim();
+            const encryptedUrl = await encryptData(url, "Victor@is@geek");
+            await sendTelegramMessage(chatId, `Encrypted URL: ${encryptedUrl}`);
+        } else if (command.startsWith("/de")) {
+            const url = text.slice(4).trim();
+            const decryptedUrl = await decryptData(url, "Victor@is@geek");
+            await sendTelegramMessage(chatId, `Decrypted URL: ${decryptedUrl}`);
+        } else if (command === "/key") {
+            await fetchAndSendSubscription(chatId, "https://github.com/Memory2314/VMesslinks/raw/main/links/vmess");
+        } else if (command === "/mss") {
+            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/subscribe/protocols/vmess");
+        } else if (command === "/cf") {
+            await fetchAndSendSubscription(chatId, "https://testingcf.jsdelivr.net/gh/peasoft/NoMoreWalls@master/list.txt");
+        } else if (command === "/ss") {
+            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/MhdiTaheri/V2rayCollector/main/sub/ssbase64");
+        } else if (command === "/trj") {
+            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/MhdiTaheri/V2rayCollector/main/sub/ssbase64");
+        } else if (command === "/lss") {
+            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/lagzian/SS-Collector/main/backup_B64.txt");
+        } else if (command === "/jp") {
+            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/lagzian/new-configs-collector/main/countries/sg/mixed");
+        } else if (command === "/sg") {
+            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/lagzian/new-configs-collector/main/countries/sg/mixed");
+        } else {
+            await sendTelegramMessage(chatId, "Unknown command. Use /help to see available commands.");
+        }
+    } catch (error) {
+        console.error("Error handling update:", error);
+        await sendTelegramMessage(chatId, "An error occurred. Please try again.");
+    }
+}
+
+async function fetchAndSendSubscription(chatId, url) {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Failed to fetch data.");
+
+        const base64Text = await response.text();
+        const decodedText = atob(base64Text);
+
+        const lines = decodedText.split("\n").filter(line => line.trim() !== "");
+        const batchSize = 15; // Limit to 15 keys per message
+        const batches = [];
+
+        for (let i = 0; i < lines.length; i += batchSize) {
+            batches.push(lines.slice(i, i + batchSize).join("\n"));
+        }
+
+        for (const batch of batches) {
+            const formattedText = `\`\`\`\n${batch}\n\`\`\``;
+            await sendTelegramMessage(chatId, formattedText);
+        }
+    } catch (error) {
+        console.error("Error fetching subscription:", error);
+        await sendTelegramMessage(chatId, "Something went wrong. Please try again.");
+    }
+}
+
+async function sendTelegramMessage(chatId, text) {
+    const url = `${BASE_URL}/sendMessage`;
+    const payload = { chat_id: chatId, text, parse_mode: "Markdown" };
+
+    await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    });
+}
+
+async function encryptData(data, password) {
+    const encoder = new TextEncoder();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(password),
+        { name: "PBKDF2" },
+        false,
+        ["deriveBits", "deriveKey"]
+    );
+    const key = await crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt: encoder.encode("salt"),
+            iterations: 100000,
+            hash: "SHA-256",
+        },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt"]
+    );
+    const encrypted = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        key,
+        encoder.encode(data)
+    );
+    return btoa(String.fromCharCode(...iv, ...new Uint8Array(encrypted)));
+}
+
+async function decryptData(encryptedData, password) {
+    const decoder = new TextDecoder();
+    const encryptedBytes = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
+    const iv = encryptedBytes.slice(0, 12);
+    const encryptedContent = encryptedBytes.slice(12);
+
+    const encoder = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(password),
+        { name: "PBKDF2" },
+        false,
+        ["deriveBits", "deriveKey"]
+    );
+    const key = await crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt: encoder.encode("salt"),
+            iterations: 100000,
+            hash: "SHA-256",
+        },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["decrypt"]
+    );
+
+    const decrypted = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv },
+        key,
+        encryptedContent
+    );
+
+    return decoder.decode(decrypted);
+}
+
+export default {
+    async fetch(request) {
+        if (request.method === "POST") {
+            const update = await request.json();
+            await handleTelegramUpdate(update);
+            return new Response("OK", { status: 200 });
+        }
+        return new Response("Bot is online!", { status: 200 });
+    },
+};
