@@ -1,25 +1,23 @@
 const TELEGRAM_API = 'https://api.telegram.org/bot';
-const BOT_TOKEN = "7292124945:AAFSrbllIZ6z1wWc7OZxEe5mxQn7iZUmnxs";
+const BOT_TOKEN = '7292124945:AAFSrbllIZ6z1wWc7OZxEe5mxQn7iZUmnxs'; // Replace with the actual bot token
 const BASE_URL = `${TELEGRAM_API}${BOT_TOKEN}`;
+const ADMIN_USER_ID = '1441910304'; // Replace with the admin's Telegram user ID
 const REFERRAL_KEYWORDS = ["refer", "air", "joinchat", "invite", "t.me"];
 const GREETING_TEXT = "𝐇𝐢! 𝐍𝐢𝐜𝐞 𝐭𝐨 𝐬𝐞𝐞 𝐲𝐨𝐮 𝐡𝐞𝐫𝐞. 𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐟𝐫𝐨𝐦 𝐅𝐚𝐬𝐭𝐬𝐬𝐡 𝐌𝐲𝐚𝐧𝐦𝐚𝐫 𝐠𝐫𝐨𝐮𝐩!";
 
 // Helper function for Telegram API requests
 async function telegramApi(endpoint, payload) {
     const url = `${BASE_URL}/${endpoint}`;
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
         const result = await response.json();
-        if (!result.ok) throw new Error(result.description);
-        return result;
-    } catch (error) {
-        console.error(`Telegram API error (${endpoint}):`, error);
-        throw error;
+        throw new Error(result.description || 'Unknown error');
     }
+    return response.json();
 }
 
 // Send a Telegram message
@@ -46,24 +44,14 @@ async function banUser(chatId, userId, messageId) {
 // Fetch and send subscription data
 async function fetchAndSendSubscription(chatId, url) {
     try {
-        console.log("Fetching URL:", url);
         const response = await fetch(url);
-        console.log("Response status:", response.status);
-
         if (!response.ok) throw new Error(`Failed to fetch data. HTTP status: ${response.status}`);
 
         const data = await response.text();
-        console.log("Raw data:", data);
-
-        let decodedText;
-        try {
-            decodedText = atob(data.trim()); // Attempt Base64 decoding
-        } catch {
-            decodedText = data; // Use raw text if decoding fails
-        }
-
+        const decodedText = atob(data.trim());
         const lines = decodedText.split("\n").filter(line => line.trim() !== "");
         const selectedKeys = lines.slice(0, 20); // Limit to 20 keys
+
         if (selectedKeys.length === 0) throw new Error("No valid keys found.");
 
         const formattedText = `\`\`\`\n${selectedKeys.join("\n")}\n\`\`\``;
@@ -74,74 +62,23 @@ async function fetchAndSendSubscription(chatId, url) {
     }
 }
 
-// Handle bot commands
+// Handle commands from admin
 async function handleCommand(command, chatId) {
-    switch (command) {
-        case '/start':
-            await sendTelegramMessage(chatId, '**!(¯`*•.¸,¤°´✿.｡.:* Bot အားအသုံးပြုသည့်အတွက်ကိုဆိုပါတယ်   /help နှိပ်ပြီး ဆက်လက် လုပ်ဆောင်ပါ .:**:.☆*.:｡.✿ .**');
-            break;
-        case '/help':
-            await sendTelegramMessage(chatId, `
-\`\`\`
-𝐂𝐨𝐦𝐦𝐚𝐧𝐝 𝐥𝐢𝐬𝐭 𝐨𝐭 𝐭𝐡𝐞 𝐁𝐨𝐭\`\`\`
+    const links = {
+        '/key': "https://github.com/Memory2314/VMesslinks/raw/main/links/vmess",
+        '/key1': "https://raw.githubusercontent.com/lagzian/SS-Collector/main/SS/V2rayMix",
+        '/key2': "https://testingcf.jsdelivr.net/gh/peasoft/NoMoreWalls@master/list.txt",
+        '/key3': "https://raw.githubusercontent.com/MhdiTaheri/V2rayCollector/main/sub/ssbase64",
+        '/key4': "https://raw.githubusercontent.com/MhdiTaheri/V2rayCollector/main/sub/ssbase64",
+        '/key5': "https://raw.githubusercontent.com/lagzian/SS-Collector/main/backup_B64.txt",
+        '/key6': "https://raw.githubusercontent.com/lagzian/new-configs-collector/main/countries/jp/mixed",
+        '/key7': "https://raw.githubusercontent.com/lagzian/new-configs-collector/main/countries/sg/mixed"
+    };
 
-/key - 
-Get free V2RAY keys
-
-/mss - 
-Get free VMess keys
-
-/cf - 
-Get free Cloudflare keys
-
-/ss - 
-Get free Shadowsocks keys
-
-/trj - 
-Get free Trojan keys
-
-/lss - 
-Get free VLess keys
-
-/jp - 
-Get Japan server keys
-
-/sg - 
-Get Singapore server keys
-
-\`\`\`
-𝐀𝐧𝐭𝐢-𝐫𝐞𝐟𝐞𝐫𝐫𝐚𝐥 𝐬𝐲𝐬𝐭𝐞𝐦 𝐞𝐧𝐚𝐛𝐥𝐞𝐝. 𝐕𝐢𝐨𝐥𝐚𝐭𝐨𝐫𝐬 𝐰𝐢𝐥𝐥 𝐛𝐞 𝐛𝐚𝐧𝐧𝐞𝐝 𝐚𝐮𝐭𝐨𝐦𝐚𝐭𝐢𝐜𝐚𝐥𝐥𝐲.\`\`\`
-
-𝘽𝙤𝙩 𝙙𝙚𝙫𝙚𝙡𝙤𝙥𝙚𝙙 𝙗𝙮 @𝙑𝙞𝙘𝙩𝙤𝙧𝙄𝙨𝙂𝙚𝙚𝙠.
-
-            `);
-            break;
-        case '/key':
-            await fetchAndSendSubscription(chatId, "https://github.com/Memory2314/VMesslinks/raw/main/links/vmess");
-            break;
-        case '/mss':
-            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/lagzian/SS-Collector/main/SS/V2rayMix");
-            break;
-        case '/cf':
-            await fetchAndSendSubscription(chatId, "https://testingcf.jsdelivr.net/gh/peasoft/NoMoreWalls@master/list.txt");
-            break;
-        case '/ss':
-            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/MhdiTaheri/V2rayCollector/main/sub/ssbase64");
-            break;
-        case '/trj':
-            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/MhdiTaheri/V2rayCollector/main/sub/ssbase64");
-            break;
-        case '/lss':
-            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/lagzian/SS-Collector/main/backup_B64.txt");
-            break;
-        case '/jp':
-            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/lagzian/new-configs-collector/main/countries/jp/mixed");
-            break;
-        case '/sg':
-            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/lagzian/new-configs-collector/main/countries/sg/mixed");
-            break;
-        default:
-            await sendTelegramMessage(chatId, "**Unknown command. Use /help to see available commands.**");
+    if (links[command]) {
+        await fetchAndSendSubscription(chatId, links[command]);
+    } else {
+        await sendTelegramMessage(chatId, "**Unknown command. Use a valid subscription command (e.g., /key, /key1, ..., /key7).**");
     }
 }
 
@@ -149,27 +86,28 @@ Get Singapore server keys
 async function handleMessage(message) {
     const chatId = message.chat.id;
     const userId = message.from.id;
-    const messageId = message.message_id;
-    const normalizedText = message.text?.toLowerCase() || '';
+    const text = message.text?.toLowerCase() || '';
 
-    if (normalizedText.startsWith('/')) {
-        const command = normalizedText.split(" ")[0].replace(/@[\w_]+$/, "").trim();
-        await handleCommand(command, chatId);
-    } else if (REFERRAL_KEYWORDS.some(keyword => normalizedText.includes(keyword))) {
-        await banUser(chatId, userId, messageId);
-    }
-}
-
-// Handle Telegram updates
-async function handleTelegramUpdate(update) {
-    if (update.message?.new_chat_members) {
-        const chatId = update.message.chat.id;
-        const members = update.message.new_chat_members.map(m => m.username || m.first_name).join(', ');
-        await sendTelegramMessage(chatId, `${GREETING_TEXT} @${members}`);
+    // Check for referral links
+    if (REFERRAL_KEYWORDS.some(keyword => text.includes(keyword))) {
+        await banUser(chatId, userId, message.message_id);
+        return;
     }
 
-    if (update.message?.text) {
-        await handleMessage(update.message);
+    // Welcome new members
+    if (message.new_chat_members) {
+        const members = message.new_chat_members.map(m => m.username ? `@${m.username}` : m.first_name).join(', ');
+        await sendTelegramMessage(chatId, `${GREETING_TEXT} Hi ${members}!`);
+        return;
+    }
+
+    // Handle commands from admin
+    if (text.startsWith('/')) {
+        if (userId.toString() === ADMIN_USER_ID) {
+            await handleCommand(text, chatId);
+        } else {
+            await sendTelegramMessage(chatId, "You do not have permission to use this command.");
+        }
     }
 }
 
@@ -177,12 +115,16 @@ async function handleTelegramUpdate(update) {
 addEventListener('fetch', event => {
     event.respondWith((async () => {
         try {
-            if (event.request.method === 'POST') {
-                const update = await event.request.json();
-                await handleTelegramUpdate(update);
+            const request = event.request;
+            if (request.method === 'POST') {
+                const update = await request.json();
+                if (update.message) {
+                    await handleMessage(update.message);
+                }
                 return new Response('OK', { status: 200 });
             }
-            return new Response('Bot is online!', { status: 200 });
+
+            return new Response('Bot is online and running!', { status: 200 });
         } catch (error) {
             console.error('Error processing request:', error);
             return new Response('Internal Server Error', { status: 500 });
