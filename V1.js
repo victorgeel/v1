@@ -18,54 +18,51 @@ async function handleTelegramUpdate(update) {
 
     try {
         if (command === "/start") {
-            await sendTelegramMessage(chatId, "Welcome to the bot! Use /help to see available commands.");
+            await sendTelegramMessage(
+                chatId,
+                "V2RAY Key များရယူနိုင်ပါပြီ! စတင်ရန် /help ကိုနှိပ်ပြီး command များကြည့်ပါ."
+            );
         } else if (command === "/help") {
             const helpMessage = `
-\`\`\`
-𝗖𝗼𝗺𝗺𝗮𝗻𝗱 𝗼𝗳 𝘁𝗵𝗲 𝘃2𝗿𝗮𝘆  𝗞𝗘𝗬 𝗕𝗼𝘁 ....\`\`\`
+*𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀 𝗳𝗼𝗿 𝗩2𝗥𝗔𝗬 𝗞𝗘𝗬𝗦:*
 
-/key - Get free V2RAY keys
+/key1 - Get free V2RAY key1  
+/key2 - Get free V2RAY key2  
+/key3 - Get free V2RAY key3  
+/key4 - Get free V2RAY key4  
+/key5 - Get free V2RAY key5  
+/key6 - Get free V2RAY key6  
+/hk   - Get Hong Kong server keys  
+/jp   - Get Japan server keys  
+/sg   - Get Singapore server keys  
+/us   - Get United States server keys  
+/tw   - Get Taiwan server keys  
+/uk   - Get United Kingdom server keys  
 
-/mss - Get free VMess keys
-
-/cf - Get free Cloudflare keys
-
-/ss - Get free Shadowsocks keys
-
-/trj - Get free Trojan keys
-
-/lss - Get free VLess keys
-
-/jp - Get Japan server keys
-
-/sg - Get Singapore server keys
-
-\`\`\`
-ဆာဗာများသည်အချိန်နှင့် အမျှ 𝚞𝚙𝚍𝚊𝚝𝚎 ပြောင်းလဲပါသည် 
-
-Bot develope by.............. @VictorIsGeek\`\`\`
-
-
+_Servers are updated over time. Developed by @VictorIsGeek._
             `;
             await sendTelegramMessage(chatId, helpMessage);
-        } else if (command === "/key") {
-            await fetchAndSendSubscription(chatId, "https://9527521.xyz/pubconfig/OsngjqRzWSAmPadi");
-        } else if (command === "/mss") {
-            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/lagzian/SS-Collector/main/SS/VM_Trinity");
-        } else if (command === "/cf") {
-            await fetchAndSendSubscription(chatId, "https://testingcf.jsdelivr.net/gh/peasoft/NoMoreWalls@master/list.txt");
-        } else if (command === "/ss") {
-            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/MhdiTaheri/V2rayCollector/main/sub/ssbase64");
-        } else if (command === "/trj") {
-            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/MhdiTaheri/V2rayCollector/main/sub/ssbase64");
-        } else if (command === "/lss") {
-            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/lagzian/SS-Collector/main/backup_B64.txt");
-        } else if (command === "/jp") {
-            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/lagzian/new-configs-collector/main/countries/jp/mixed");
-        } else if (command === "/sg") {
-            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/lagzian/new-configs-collector/main/countries/sg/mixed");
-        } else {
-            await sendTelegramMessage(chatId, "Unknown command. Use /help to see available commands.");
+        } else if (command.startsWith("/")) {
+            const urls = {
+                "/key1": "https://raw.githubusercontent.com/lagzian/SS-Collector/main/SS/VM_Trinity.txt",
+                "/key2": "https://raw.githubusercontent.com/SonzaiEkkusu/V2RayDumper/main/config.txt",
+                "/key3": "https://raw.githubusercontent.com/iboxz/free-v2ray-collector/main/main/mix",
+                "/key4": "https://raw.githubusercontent.com/roosterkid/openproxylist/main/V2RAY_RAW.txt",
+                "/key5": "https://raw.githubusercontent.com/MrMohebi/xray-proxy-grabber-telegram/master/collected-proxies/row-url/actives.txt",
+                "/key6": "https://raw.githubusercontent.com/miladtahanian/V2RayCFGDumper/main/config.txt",
+                "/hk": "https://raw.githubusercontent.com/SoliSpirit/v2ray-configs/main/Countries/Hong_Kong.txt",
+                "/jp": "https://raw.githubusercontent.com/SoliSpirit/v2ray-configs/main/Countries/Japan.txt",
+                "/sg": "https://raw.githubusercontent.com/SoliSpirit/v2ray-configs/main/Countries/Singapore.txt",
+                "/us": "https://raw.githubusercontent.com/SoliSpirit/v2ray-configs/main/Countries/United_States.txt",
+                "/tw": "https://raw.githubusercontent.com/SoliSpirit/v2ray-configs/main/Countries/Taiwan.txt",
+                "/uk": "https://raw.githubusercontent.com/SoliSpirit/v2ray-configs/main/Countries/United_Kingdom.txt",
+            };
+
+            if (urls[command]) {
+                await fetchAndSendMultipleLines(chatId, urls[command]);
+            } else {
+                await sendTelegramMessage(chatId, "Unknown command. Use /help to see available commands.");
+            }
         }
     } catch (error) {
         console.error("Error handling update:", error);
@@ -73,30 +70,32 @@ Bot develope by.............. @VictorIsGeek\`\`\`
     }
 }
 
-async function fetchAndSendSubscription(chatId, url) {
+async function fetchAndSendMultipleLines(chatId, url) {
     try {
         const response = await fetch(url);
-        if (!response.ok) throw new Error("Failed to fetch data.");
+        if (!response.ok) throw new Error(`Failed to fetch data from URL: ${url}`);
 
         const data = await response.text();
+        const lines = data
+            .split("\n")
+            .filter(line => line.trim() !== "" && !line.startsWith("#")) // Remove empty lines and those with `#`
+            .map(line => line.split("#")[0].trim()); // Remove comments after `#`
 
-        // Decode Base64 if applicable; fallback to raw
-        let decodedText;
-        try {
-            decodedText = atob(data);
-        } catch {
-            decodedText = data;
+        if (lines.length === 0) throw new Error("No valid keys found.");
+
+        // Select 10 random lines
+        const selectedLines = [];
+        while (selectedLines.length < 10 && lines.length > 0) {
+            const randomIndex = Math.floor(Math.random() * lines.length);
+            selectedLines.push(lines[randomIndex]);
+            lines.splice(randomIndex, 1); // Remove the selected line to avoid duplicates
         }
 
-        const lines = decodedText.split("\n").filter(line => line.trim() !== "");
-        const selectedKeys = lines.slice(0, 15); // Limit to 15 keys
-        if (selectedKeys.length === 0) throw new Error("No valid keys found.");
-
-        const formattedText = `\`\`\`\n${selectedKeys.join("\n")}\n\`\`\``;
-        await sendTelegramMessage(chatId, formattedText);
+        const formattedText = selectedLines.join("\n\n");
+        await sendTelegramMessage(chatId, `\`\`\`\n${formattedText}\n\`\`\``);
     } catch (error) {
         console.error("Error fetching subscription:", error);
-        await sendTelegramMessage(chatId, "Unable to retrieve keys. Please check the source URL or try again later.");
+        await sendTelegramMessage(chatId, `Error retrieving data for the provided URL.`);
     }
 }
 
