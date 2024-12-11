@@ -7,7 +7,12 @@ async function handleTelegramUpdate(update) {
     const chatId = update.message.chat.id;
     const text = update.message.text;
 
-    // Extract the command and remove mentions (if any)
+    if (update.message.chat.type === "group" || update.message.chat.type === "supergroup") {
+        if (!text.startsWith("/") || !text.includes(`@${update.message.bot_username}`)) {
+            return;
+        }
+    }
+
     const commandText = text.split(" ")[0];
     const command = commandText.replace(/@[\w_]+$/, "").trim();
 
@@ -17,32 +22,36 @@ async function handleTelegramUpdate(update) {
         } else if (command === "/help") {
             const helpMessage = `
 \`\`\`
-Available Commands:\`\`\`
-/en [URL] - Encrypt a URL
-/de [URL] - Decrypt a URL
+𝗖𝗼𝗺𝗺𝗮𝗻𝗱 𝗼𝗳 𝘁𝗵𝗲 𝘃2𝗿𝗮𝘆  𝗞𝗘𝗬 𝗕𝗼𝘁 ....\`\`\`
+
 /key - Get free V2RAY keys
+
 /mss - Get free VMess keys
+
 /cf - Get free Cloudflare keys
+
 /ss - Get free Shadowsocks keys
+
 /trj - Get free Trojan keys
+
 /lss - Get free VLess keys
+
 /jp - Get Japan server keys
+
 /sg - Get Singapore server keys
+
+\`\`\`
+ဆာဗာများသည်အချိန်နှင့် အမျှ 𝚞𝚙𝚍𝚊𝚝𝚎 ပြောင်းလဲပါသည် 
+
+Bot develope by.............. @VictorIsGeek\`\`\`
+
 
             `;
             await sendTelegramMessage(chatId, helpMessage);
-        } else if (command.startsWith("/en")) {
-            const url = text.slice(4).trim();
-            const encryptedUrl = await encryptData(url, "Victor@is@geek");
-            await sendTelegramMessage(chatId, `Encrypted URL: ${encryptedUrl}`);
-        } else if (command.startsWith("/de")) {
-            const url = text.slice(4).trim();
-            const decryptedUrl = await decryptData(url, "Victor@is@geek");
-            await sendTelegramMessage(chatId, `Decrypted URL: ${decryptedUrl}`);
         } else if (command === "/key") {
             await fetchAndSendSubscription(chatId, "https://github.com/Memory2314/VMesslinks/raw/main/links/vmess");
         } else if (command === "/mss") {
-            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/soroushmirzaei/telegram-configs-collector/main/subscribe/protocols/vmess");
+            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/lagzian/SS-Collector/main/SS/VM_Trinity");
         } else if (command === "/cf") {
             await fetchAndSendSubscription(chatId, "https://testingcf.jsdelivr.net/gh/peasoft/NoMoreWalls@master/list.txt");
         } else if (command === "/ss") {
@@ -52,7 +61,7 @@ Available Commands:\`\`\`
         } else if (command === "/lss") {
             await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/lagzian/SS-Collector/main/backup_B64.txt");
         } else if (command === "/jp") {
-            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/lagzian/new-configs-collector/main/countries/sg/mixed");
+            await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/lagzian/new-configs-collector/main/countries/jp/mixed");
         } else if (command === "/sg") {
             await fetchAndSendSubscription(chatId, "https://raw.githubusercontent.com/lagzian/new-configs-collector/main/countries/sg/mixed");
         } else {
@@ -69,24 +78,25 @@ async function fetchAndSendSubscription(chatId, url) {
         const response = await fetch(url);
         if (!response.ok) throw new Error("Failed to fetch data.");
 
-        const base64Text = await response.text();
-        const decodedText = atob(base64Text);
+        const data = await response.text();
+
+        // Decode Base64 if applicable; fallback to raw
+        let decodedText;
+        try {
+            decodedText = atob(data);
+        } catch {
+            decodedText = data;
+        }
 
         const lines = decodedText.split("\n").filter(line => line.trim() !== "");
-        const batchSize = 15; // Limit to 15 keys per message
-        const batches = [];
+        const selectedKeys = lines.slice(0, 15); // Limit to 15 keys
+        if (selectedKeys.length === 0) throw new Error("No valid keys found.");
 
-        for (let i = 0; i < lines.length; i += batchSize) {
-            batches.push(lines.slice(i, i + batchSize).join("\n"));
-        }
-
-        for (const batch of batches) {
-            const formattedText = `\`\`\`\n${batch}\n\`\`\``;
-            await sendTelegramMessage(chatId, formattedText);
-        }
+        const formattedText = `\`\`\`\n${selectedKeys.join("\n")}\n\`\`\``;
+        await sendTelegramMessage(chatId, formattedText);
     } catch (error) {
         console.error("Error fetching subscription:", error);
-        await sendTelegramMessage(chatId, "Something went wrong. Please try again.");
+        await sendTelegramMessage(chatId, "Unable to retrieve keys. Please check the source URL or try again later.");
     }
 }
 
@@ -99,72 +109,6 @@ async function sendTelegramMessage(chatId, text) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
     });
-}
-
-async function encryptData(data, password) {
-    const encoder = new TextEncoder();
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const keyMaterial = await crypto.subtle.importKey(
-        "raw",
-        encoder.encode(password),
-        { name: "PBKDF2" },
-        false,
-        ["deriveBits", "deriveKey"]
-    );
-    const key = await crypto.subtle.deriveKey(
-        {
-            name: "PBKDF2",
-            salt: encoder.encode("salt"),
-            iterations: 100000,
-            hash: "SHA-256",
-        },
-        keyMaterial,
-        { name: "AES-GCM", length: 256 },
-        true,
-        ["encrypt"]
-    );
-    const encrypted = await crypto.subtle.encrypt(
-        { name: "AES-GCM", iv },
-        key,
-        encoder.encode(data)
-    );
-    return btoa(String.fromCharCode(...iv, ...new Uint8Array(encrypted)));
-}
-
-async function decryptData(encryptedData, password) {
-    const decoder = new TextDecoder();
-    const encryptedBytes = Uint8Array.from(atob(encryptedData), c => c.charCodeAt(0));
-    const iv = encryptedBytes.slice(0, 12);
-    const encryptedContent = encryptedBytes.slice(12);
-
-    const encoder = new TextEncoder();
-    const keyMaterial = await crypto.subtle.importKey(
-        "raw",
-        encoder.encode(password),
-        { name: "PBKDF2" },
-        false,
-        ["deriveBits", "deriveKey"]
-    );
-    const key = await crypto.subtle.deriveKey(
-        {
-            name: "PBKDF2",
-            salt: encoder.encode("salt"),
-            iterations: 100000,
-            hash: "SHA-256",
-        },
-        keyMaterial,
-        { name: "AES-GCM", length: 256 },
-        true,
-        ["decrypt"]
-    );
-
-    const decrypted = await crypto.subtle.decrypt(
-        { name: "AES-GCM", iv },
-        key,
-        encryptedContent
-    );
-
-    return decoder.decode(decrypted);
 }
 
 export default {
